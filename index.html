@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>trading hours · market countdown</title>
+    <style>
+        /* ===== YOUR EXISTING STYLES (unchanged) ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 10% 20%, #0B0F1C, #03050A);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .app {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(130deg, #F2F6FF, #A5B9FF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-time {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #cbd5ff;
+            background: rgba(18, 25, 45, 0.8);
+            backdrop-filter: blur(4px);
+            display: inline-block;
+            padding: 0.4rem 1.2rem;
+            border-radius: 40px;
+            border: 1px solid rgba(120, 180, 255, 0.3);
+            margin-top: 0.25rem;
+        }
+
+        .markets-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(340px, 380px));
+            gap: 8rem;
+            justify-content: center;
+            margin: 2rem 0 2rem;
+        }
+
+        .card {
+            background: rgba(12, 18, 28, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 2rem;
+            padding: 1.6rem 1.6rem 1.8rem;
+            transition: all 0.25s ease;
+            border: 1px solid rgba(72, 130, 255, 0.2);
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .card:hover {
+            border-color: rgba(96, 165, 250, 0.6);
+            background: rgba(16, 24, 36, 0.85);
+            transform: translateY(-3px);
+        }
+
+        .session-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .session-name {
+            font-size: 1.8rem;
+            font-weight: 650;
+            letter-spacing: -0.3px;
+            background: linear-gradient(120deg, #FFFFFF, #C0D0FF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .status-badge {
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            background: #0f1422;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-badge.open {
+            color: #2dd4bf;
+            background: rgba(45, 212, 191, 0.12);
+            border: 1px solid rgba(45,212,191,0.3);
+        }
+
+        .status-badge.closed {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251,191,36,0.25);
+        }
+
+        .dot {
+            font-size: 0.8rem;
+            line-height: 1;
+            font-weight: 700;
+        }
+
+        .status-badge.open .dot {
+            color: #2dd4bf;
+            text-shadow: 0 0 2px #2dd4bf;
+        }
+
+        .status-badge.closed .dot {
+            color: #fbbf24;
+            text-shadow: 0 0 2px #fbbf24;
+        }
+
+        .timer-block {
+            background: #070B14;
+            border-radius: 1.8rem;
+            padding: 1rem 0.8rem;
+            text-align: center;
+            margin: 1rem 0 0.8rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .countdown-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #a5b4fc;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .countdown {
+            font-family: 'JetBrains Mono', 'SF Mono', monospace;
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #F0F4FF, #CBD5FF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin: 0.2rem 0;
+            line-height: 1.2;
+        }
+
+        .progress-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            height: 6px;
+            width: 100%;
+            margin: 0.5rem 0 0.8rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 0.2s linear;
+        }
+
+        .progress-fill.open {
+            background: linear-gradient(90deg, #2dd4bf, #14b8a6);
+            box-shadow: 0 0 4px #2dd4bf;
+        }
+
+        .progress-fill.closed {
+            background: linear-gradient(90deg, #fbbf24, #d97706);
+            box-shadow: 0 0 3px #fbbf24;
+        }
+
+        .session-details {
+            margin-top: 0.8rem;
+            font-size: 0.8rem;
+            color: #cbd5e6;
+            border-top: 1px solid #2a3655;
+            padding-top: 0.8rem;
+        }
+
+        .session-range {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0.4rem;
+        }
+
+        .clock-icon {
+            font-size: 0.9rem;
+            color: #8a9bd6;
+            font-weight: 400;
+        }
+
+        .range-text {
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .scheduled-line {
+            color: #b9c8ff;
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-left: 1.4rem;
+            opacity: 0.95;
+        }
+
+        .edit-footnote {
+            text-align: center;
+            margin-top: 2.5rem;
+            font-size: 0.75rem;
+            background: rgba(0, 0, 0, 0.4);
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            color: #a0b0da;
+            backdrop-filter: blur(4px);
+        }
+
+        .edit-footnote code {
+            background: #00000050;
+            padding: 0.2rem 0.4rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: #facc15;
+        }
+
+        /* ===== NEW STYLES FOR CUSTOM ALERTS ===== */
+        .custom-alerts-section {
+            margin-top: 3rem;
+            background: rgba(12, 18, 28, 0.6);
+            backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            padding: 1.8rem 2rem;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .custom-alerts-section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #e0e7ff;
+            margin-bottom: 0.3rem;
+        }
+
+        .custom-alerts-section .hint {
+            color: #9ab3ff;
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .alert-card {
+            background: #0f1a2b;
+            border-radius: 1rem;
+            padding: 1rem;
+            border: 1px solid #2e4a7a;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .alert-label {
+            font-weight: 600;
+            color: #bdd3ff;
+            font-size: 0.9rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2a3a55;
+            transition: .2s;
+            border-radius: 22px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #a0b5e0;
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: white;
+        }
+
+        .alert-time-input {
+            background: #1e2c42;
+            border: 1px solid #3e5a8a;
+            color: white;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 0.8rem 2rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: 1px solid #60a5fa;
+            transition: 0.15s;
+        }
+
+        .save-btn:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: scale(1.02);
+        }
+
+        .save-status {
+            margin-top: 0.8rem;
+            font-size: 0.8rem;
+            color: #a5b9ff;
+        }
+
+        @media (max-width: 700px) {
+            .markets-grid {
+                grid-template-columns: 1fr;
+                gap: 1.2rem;
+            }
+            .card {
+                padding: 1.2rem;
+            }
+            .countdown {
+                font-size: 1.8rem;
+                letter-spacing: 2px;
+            }
+            .session-name {
+                font-size: 1.5rem;
+            }
+            .current-time {
+                font-size: 0.85rem;
+            }
+            .session-details {
+                font-size: 0.7rem;
+            }
+            .custom-alerts-section {
+                padding: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="hero">
+        <h1>Trading Hours</h1>
+        <div class="current-time" id="currentTimeDisplay">--:--:-- ET</div>
+    </div>
+
+    <div class="markets-grid" id="marketsGrid"></div>
+
+    <!-- ===== CUSTOM ALERTS SECTION ===== -->
+    <div class="custom-alerts-section">
+        <h2>⏰ Custom Alerts (5 min before)</h2>
+        <p class="hint">Set up to 10 custom times (12‑hour format, e.g. 02:30 PM). Toggle on/off.</p>
+        <div id="customAlertsContainer" class="alerts-grid"></div>
+        <button id="saveAlertsBtn" class="save-btn">💾 Save Alerts to Server</button>
+        <div id="saveStatus" class="save-status"></div>
+    </div>
+
+    <div class="edit-footnote">
+        🎛️ times in ET. Weekend detection: Asia opens Sunday 7pm; Frankfurt/London/NY closed until Monday.
+    </div>
+</div>
+
+<script>
+    // ==========================================================
+    // SESSION TIMES IN NEW YORK TIME (ET)
+    // ==========================================================
+    
+    const marketsNY = [
+        { name: "ASIA", openTimeET: "7:00 PM", closeTimeET: "3:00 AM", allowSundayOpen: true },
+        { name: "FRANKFURT", openTimeET: "2:00 AM", closeTimeET: "10:00 AM", allowSundayOpen: false },
+        { name: "LONDON", openTimeET: "3:00 AM", closeTimeET: "11:30 AM", allowSundayOpen: false },
+        { name: "NEW YORK", openTimeET: "9:30 AM", closeTimeET: "4:00 PM", allowSundayOpen: false }
+    ];
+
+    // ========== BACKEND API URL (UPDATED) ==========
+    const BACKEND_URL = 'https://trading-alerts-0qsr.onrender.com';
+
+    // Helper: parse "02:30 PM" → { hour24, minute }
+    function parse12hTo24h(time12h) {
+        const trimmed = time12h.trim().toUpperCase();
+        let isPM = trimmed.includes('PM');
+        let timePart = trimmed.replace(/AM|PM/, '').trim();
+        let parts = timePart.split(':');
+        let hours = parseInt(parts[0], 10);
+        let minutes = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+        if (isPM && hours !== 12) hours += 12;
+        if (!isPM && hours === 12) hours = 0;
+        return { hour24: hours, minute: minutes };
+    }
+
+    // Helper: convert 24h to 12h display string
+    function format12h(hour24, minute) {
+        const ampm = hour24 >= 12 ? 'PM' : 'AM';
+        let h12 = hour24 % 12;
+        if (h12 === 0) h12 = 12;
+        return `${h12.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    }
+
+    // ========== EXISTING TIME / SESSION LOGIC ==========
+    function getCurrentETComponents() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric', month: 'numeric', day: 'numeric',
+            hour: 'numeric', minute: 'numeric', second: 'numeric',
+            hour12: false, weekday: 'long'
+        });
+        const parts = formatter.formatToParts(now);
+        let result = {};
+        for (const p of parts) {
+            result[p.type] = p.type === 'weekday' ? p.value : parseInt(p.value, 10);
+        }
+        result.month = result.month - 1;
+        return result;
+    }
+
+    function etDateTimeToUTC(year, month, day, hour24, minute) {
+        const tempUTCDate = Date.UTC(year, month, day, hour24, minute, 0);
+        const tempDate = new Date(tempUTCDate);
+        const offsetFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            timeZoneName: 'longOffset'
+        });
+        const offsetParts = offsetFormatter.formatToParts(tempDate);
+        let offsetStr = '';
+        for (const p of offsetParts) {
+            if (p.type === 'timeZoneName') offsetStr = p.value;
+        }
+        let offsetMinutes = 0;
+        const match = offsetStr.match(/GMT([+-]\d{1,2}(?::\d{2})?)/);
+        if (match) {
+            let sign = match[1][0];
+            let val = match[1].slice(1);
+            let hoursOffset = parseInt(val.split(':')[0], 10);
+            let minsOffset = val.includes(':') ? parseInt(val.split(':')[1], 10) : 0;
+            offsetMinutes = hoursOffset * 60 + minsOffset;
+            if (sign === '-') offsetMinutes = -offsetMinutes;
+        } else {
+            const dstStart = new Date(Date.UTC(year, 2, 8 + (14 - new Date(year, 2, 1).getDay()), 7, 0, 0));
+            const dstEnd = new Date(Date.UTC(year, 10, 1 + (7 - new Date(year, 10, 1).getDay()), 6, 0, 0));
+            const isDST = (tempUTCDate >= dstStart.getTime() && tempUTCDate < dstEnd.getTime());
+            offsetMinutes = isDST ? -240 : -300;
+        }
+        return tempUTCDate - offsetMinutes * 60000;
+    }
+
+    function getTimestamp(year, month, day, hour, minute) {
+        return etDateTimeToUTC(year, month, day, hour, minute);
+    }
+
+    function getSessionStatusWithProgress(openTimeET, closeTimeET, allowSundayOpen) {
+        const nowET = getCurrentETComponents();
+        const nowUTC = Date.now();
+        const weekday = nowET.weekday;
+        
+        if (weekday === 'Saturday') {
+            let daysUntilTarget = allowSundayOpen ? 1 : 2;
+            let targetDay = nowET.day + daysUntilTarget;
+            let targetYear = nowET.year, targetMonth = nowET.month;
+            let tempDate = new Date(Date.UTC(targetYear, targetMonth, targetDay));
+            if (tempDate.getUTCMonth() !== targetMonth) {
+                targetMonth = tempDate.getUTCMonth();
+                targetYear = tempDate.getUTCFullYear();
+                targetDay = tempDate.getUTCDate();
+            }
+            const open24 = parse12hTo24h(openTimeET);
+            const nextOpenTimestamp = getTimestamp(targetYear, targetMonth, targetDay, open24.hour24, open24.minute);
+            
+            let fridayDay = nowET.day - 1;
+            let fridayYear = nowET.year, fridayMonth = nowET.month;
+            let fridayTemp = new Date(Date.UTC(fridayYear, fridayMonth, fridayDay));
+            if (fridayTemp.getUTCMonth() !== fridayMonth) {
+                fridayMonth = fridayTemp.getUTCMonth();
+                fridayYear = fridayTemp.getUTCFullYear();
+                fridayDay = fridayTemp.getUTCDate();
+            }
+            const close24 = parse12hTo24h(closeTimeET);
+            const fridayCloseTimestamp = getTimestamp(fridayYear, fridayMonth, fridayDay, close24.hour24, close24.minute);
+            
+            let progress = 0;
+            if (nowUTC >= fridayCloseTimestamp && nextOpenTimestamp > fridayCloseTimestamp) {
+                const elapsed = nowUTC - fridayCloseTimestamp;
+                const total = nextOpenTimestamp - fridayCloseTimestamp;
+                progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+            }
+            const msDiff = nextOpenTimestamp - nowUTC;
+            const totalSec = Math.max(0, Math.floor(msDiff / 1000));
+            const days = Math.floor(totalSec / 86400);
+            const hours = Math.floor((totalSec % 86400) / 3600);
+            const minutes = Math.floor((totalSec % 3600) / 60);
+            const seconds = totalSec % 60;
+            let countdown = "";
+            if (days > 0) countdown += `${days}d `;
+            countdown += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const nextEventDateObj = new Date(nextOpenTimestamp);
+            const nextEventET = nextEventDateObj.toLocaleString('en-US', {
+                timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true
+            });
+            return {
+                status: "closed", nextEventType: "open", countdown,
+                nextEventTime: nextEventET, progress, scheduledTime: openTimeET
+            };
+        }
+        
+        if (weekday === 'Sunday') {
+            if (allowSundayOpen) {
+                const open24 = parse12hTo24h(openTimeET);
+                const close24 = parse12hTo24h(closeTimeET);
+                const currentMinutes = nowET.hour * 60 + nowET.minute;
+                const openMinutes = open24.hour24 * 60 + open24.minute;
+                const closeMinutes = close24.hour24 * 60 + close24.minute;
+                if (currentMinutes >= openMinutes || currentMinutes < closeMinutes) {
+                    let closeDay = nowET.day + 1;
+                    let openTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, open24.hour24, open24.minute);
+                    let closeTimestamp = getTimestamp(nowET.year, nowET.month, closeDay, close24.hour24, close24.minute);
+                    let periodStart = openTimestamp, periodEnd = closeTimestamp, nextEventTimestamp = closeTimestamp;
+                    let progress = 0;
+                    if (periodStart && periodEnd && periodEnd > periodStart) {
+                        const elapsed = nowUTC - periodStart;
+                        const total = periodEnd - periodStart;
+                        progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                    }
+                    const msDiff = nextEventTimestamp - nowUTC;
+                    const totalSec = Math.max(0, Math.floor(msDiff / 1000));
+                    const days = Math.floor(totalSec / 86400);
+                    const hours = Math.floor((totalSec % 86400) / 3600);
+                    const minutes = Math.floor((totalSec % 3600) / 60);
+                    const seconds = totalSec % 60;
+                    let countdown = "";
+                    if (days > 0) countdown += `${days}d `;
+                    countdown += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    const nextEventDateObj = new Date(nextEventTimestamp);
+                    const nextEventET = nextEventDateObj.toLocaleString('en-US', {
+                        timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true
+                    });
+                    return {
+                        status: "open", nextEventType: "close", countdown,
+                        nextEventTime: nextEventET, progress, scheduledTime: closeTimeET
+                    };
+                } else {
+                    const nextOpenTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, open24.hour24, open24.minute);
+                    let fridayDay = nowET.day - 2;
+                    let fridayYear = nowET.year, fridayMonth = nowET.month;
+                    let fridayTemp = new Date(Date.UTC(fridayYear, fridayMonth, fridayDay));
+                    if (fridayTemp.getUTCMonth() !== fridayMonth) {
+                        fridayMonth = fridayTemp.getUTCMonth();
+                        fridayYear = fridayTemp.getUTCFullYear();
+                        fridayDay = fridayTemp.getUTCDate();
+                    }
+                    const close24Fri = parse12hTo24h(closeTimeET);
+                    const fridayCloseTimestamp = getTimestamp(fridayYear, fridayMonth, fridayDay, close24Fri.hour24, close24Fri.minute);
+                    let progress = 0;
+                    if (nowUTC >= fridayCloseTimestamp && nextOpenTimestamp > fridayCloseTimestamp) {
+                        const elapsed = nowUTC - fridayCloseTimestamp;
+                        const total = nextOpenTimestamp - fridayCloseTimestamp;
+                        progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                    }
+                    const msDiff = nextOpenTimestamp - nowUTC;
+                    const totalSec = Math.max(0, Math.floor(msDiff / 1000));
+                    const days = Math.floor(totalSec / 86400);
+                    const hours = Math.floor((totalSec % 86400) / 3600);
+                    const minutes = Math.floor((totalSec % 3600) / 60);
+                    const seconds = totalSec % 60;
+                    let countdown = "";
+                    if (days > 0) countdown += `${days}d `;
+                    countdown += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    const nextEventDateObj = new Date(nextOpenTimestamp);
+                    const nextEventET = nextEventDateObj.toLocaleString('en-US', {
+                        timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true
+                    });
+                    return {
+                        status: "closed", nextEventType: "open", countdown,
+                        nextEventTime: nextEventET, progress, scheduledTime: openTimeET
+                    };
+                }
+            } else {
+                // Sunday, no Sunday open → Monday
+                let daysUntilMonday = 1;
+                let targetDay = nowET.day + daysUntilMonday;
+                let targetYear = nowET.year, targetMonth = nowET.month;
+                let tempDate = new Date(Date.UTC(targetYear, targetMonth, targetDay));
+                if (tempDate.getUTCMonth() !== targetMonth) {
+                    targetMonth = tempDate.getUTCMonth();
+                    targetYear = tempDate.getUTCFullYear();
+                    targetDay = tempDate.getUTCDate();
+                }
+                const open24 = parse12hTo24h(openTimeET);
+                const nextOpenTimestamp = getTimestamp(targetYear, targetMonth, targetDay, open24.hour24, open24.minute);
+                let fridayDay = nowET.day - 2;
+                let fridayYear = nowET.year, fridayMonth = nowET.month;
+                let fridayTemp = new Date(Date.UTC(fridayYear, fridayMonth, fridayDay));
+                if (fridayTemp.getUTCMonth() !== fridayMonth) {
+                    fridayMonth = fridayTemp.getUTCMonth();
+                    fridayYear = fridayTemp.getUTCFullYear();
+                    fridayDay = fridayTemp.getUTCDate();
+                }
+                const close24 = parse12hTo24h(closeTimeET);
+                const fridayCloseTimestamp = getTimestamp(fridayYear, fridayMonth, fridayDay, close24.hour24, close24.minute);
+                let progress = 0;
+                if (nowUTC >= fridayCloseTimestamp && nextOpenTimestamp > fridayCloseTimestamp) {
+                    const elapsed = nowUTC - fridayCloseTimestamp;
+                    const total = nextOpenTimestamp - fridayCloseTimestamp;
+                    progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                }
+                const msDiff = nextOpenTimestamp - nowUTC;
+                const totalSec = Math.max(0, Math.floor(msDiff / 1000));
+                const days = Math.floor(totalSec / 86400);
+                const hours = Math.floor((totalSec % 86400) / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const seconds = totalSec % 60;
+                let countdown = "";
+                if (days > 0) countdown += `${days}d `;
+                countdown += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                const nextEventDateObj = new Date(nextOpenTimestamp);
+                const nextEventET = nextEventDateObj.toLocaleString('en-US', {
+                    timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true
+                });
+                return {
+                    status: "closed", nextEventType: "open", countdown,
+                    nextEventTime: nextEventET, progress, scheduledTime: openTimeET
+                };
+            }
+        }
+        
+        // Normal weekday
+        const open24 = parse12hTo24h(openTimeET);
+        const close24 = parse12hTo24h(closeTimeET);
+        const isOvernight = (close24.hour24 < open24.hour24) ||
+                            (close24.hour24 === open24.hour24 && close24.minute < open24.minute);
+        const currentMinutes = nowET.hour * 60 + nowET.minute;
+        const openMinutes = open24.hour24 * 60 + open24.minute;
+        const closeMinutes = close24.hour24 * 60 + close24.minute;
+        let status, nextEventType, nextEventTimestamp, periodStart, periodEnd;
+        
+        if (isOvernight) {
+            if (currentMinutes >= openMinutes || currentMinutes < closeMinutes) {
+                status = "open";
+                nextEventType = "close";
+                let closeDay = nowET.day;
+                if (currentMinutes >= openMinutes) closeDay = nowET.day + 1;
+                let openTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, open24.hour24, open24.minute);
+                let closeTimestamp = getTimestamp(nowET.year, nowET.month, closeDay, close24.hour24, close24.minute);
+                if (currentMinutes < closeMinutes) {
+                    openTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day - 1, open24.hour24, open24.minute);
+                }
+                periodStart = openTimestamp;
+                periodEnd = closeTimestamp;
+                nextEventTimestamp = closeTimestamp;
+            } else {
+                status = "closed";
+                nextEventType = "open";
+                let openDay = nowET.day;
+                if (currentMinutes >= closeMinutes && currentMinutes < openMinutes) openDay = nowET.day;
+                else openDay = nowET.day + 1;
+                let closeTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, close24.hour24, close24.minute);
+                if (closeTimestamp > nowUTC) {
+                    closeTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day - 1, close24.hour24, close24.minute);
+                }
+                const nextOpenTimestamp = getTimestamp(nowET.year, nowET.month, openDay, open24.hour24, open24.minute);
+                periodStart = closeTimestamp;
+                periodEnd = nextOpenTimestamp;
+                nextEventTimestamp = nextOpenTimestamp;
+            }
+        } else {
+            const openTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, open24.hour24, open24.minute);
+            const closeTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day, close24.hour24, close24.minute);
+            if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+                status = "open";
+                nextEventType = "close";
+                periodStart = openTimestamp;
+                periodEnd = closeTimestamp;
+                nextEventTimestamp = closeTimestamp;
+            } else {
+                status = "closed";
+                nextEventType = "open";
+                let nextOpenTimestamp, prevCloseTimestamp;
+                if (currentMinutes < openMinutes) {
+                    prevCloseTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day - 1, close24.hour24, close24.minute);
+                    nextOpenTimestamp = openTimestamp;
+                } else {
+                    prevCloseTimestamp = closeTimestamp;
+                    nextOpenTimestamp = getTimestamp(nowET.year, nowET.month, nowET.day + 1, open24.hour24, open24.minute);
+                }
+                periodStart = prevCloseTimestamp;
+                periodEnd = nextOpenTimestamp;
+                nextEventTimestamp = nextOpenTimestamp;
+            }
+        }
+        
+        let progress = 0;
+        if (periodStart && periodEnd && periodEnd > periodStart) {
+            const elapsed = nowUTC - periodStart;
+            const total = periodEnd - periodStart;
+            progress = Math.min(100, Math.max(0, (elapsed / total) * 100));
+        }
+        const msDiff = nextEventTimestamp - nowUTC;
+        const totalSec = Math.max(0, Math.floor(msDiff / 1000));
+        const days = Math.floor(totalSec / 86400);
+        const hours = Math.floor((totalSec % 86400) / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        let countdown = "";
+        if (days > 0) countdown += `${days}d `;
+        countdown += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const nextEventDateObj = new Date(nextEventTimestamp);
+        const nextEventET = nextEventDateObj.toLocaleString('en-US', {
+            timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true
+        });
+        const scheduledTime = nextEventType === 'open' ? openTimeET : closeTimeET;
+        return { status, nextEventType, countdown, nextEventTime: nextEventET, progress, scheduledTime };
+    }
+    
+    // UI rendering
+    let intervalId = null;
+    const cardRefs = new Map();
+    
+    function updateCurrentTime() {
+        const timeElement = document.getElementById('currentTimeDisplay');
+        if (timeElement) {
+            const now = new Date();
+            const etString = now.toLocaleString('en-US', {
+                timeZone: 'America/New_York',
+                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+            });
+            timeElement.textContent = etString + " ET";
+        }
+    }
+    
+    function buildCards() {
+        const container = document.getElementById('marketsGrid');
+        container.innerHTML = '';
+        cardRefs.clear();
+        
+        marketsNY.forEach((market, idx) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.id = `card-${idx}`;
+            card.innerHTML = `
+                <div class="session-header">
+                    <div class="session-name">${market.name}</div>
+                    <span class="status-badge" id="statusBadge-${idx}">--</span>
+                </div>
+                <div class="timer-block">
+                    <div class="countdown-label" id="countdownLabel-${idx}">--</div>
+                    <div class="countdown" id="timerDisplay-${idx}">--:--:--</div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-fill" id="progressFill-${idx}" style="width: 0%;"></div>
+                </div>
+                <div class="session-details">
+                    <div class="session-range">
+                        <span class="clock-icon">⌚</span>
+                        <span class="range-text">${market.openTimeET} – ${market.closeTimeET} ET</span>
+                    </div>
+                    <div class="scheduled-line" id="scheduledLine-${idx}">Scheduled for ...</div>
+                </div>
+            `;
+            container.appendChild(card);
+            cardRefs.set(idx, {
+                statusSpan: document.getElementById(`statusBadge-${idx}`),
+                countdownLabel: document.getElementById(`countdownLabel-${idx}`),
+                timerSpan: document.getElementById(`timerDisplay-${idx}`),
+                progressFill: document.getElementById(`progressFill-${idx}`),
+                scheduledLine: document.getElementById(`scheduledLine-${idx}`)
+            });
+        });
+    }
+    
+    function updateAllTimers() {
+        for (let i = 0; i < marketsNY.length; i++) {
+            const m = marketsNY[i];
+            const session = getSessionStatusWithProgress(m.openTimeET, m.closeTimeET, m.allowSundayOpen);
+            const ref = cardRefs.get(i);
+            if (!ref) continue;
+            
+            const dotHtml = `<span class="dot">●</span>`;
+            const statusText = session.status.toUpperCase();
+            ref.statusSpan.innerHTML = `${dotHtml} ${statusText}`;
+            ref.statusSpan.className = `status-badge ${session.status}`;
+            
+            ref.countdownLabel.innerText = session.nextEventType === 'open' ? 'OPENS IN' : 'CLOSES IN';
+            ref.timerSpan.innerText = session.countdown;
+            if (ref.progressFill) {
+                ref.progressFill.style.width = `${session.progress}%`;
+                ref.progressFill.className = `progress-fill ${session.status}`;
+            }
+            ref.scheduledLine.innerText = `Scheduled for ${session.scheduledTime} ET`;
+        }
+    }
+
+    // ========== CUSTOM ALERTS LOGIC ==========
+    let customAlertsData = [];
+
+    // Load from backend
+    async function loadCustomAlerts() {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/alerts`);
+            const data = await res.json();
+            customAlertsData = data;
+        } catch (err) {
+            console.warn('Using default alerts (backend not reachable)');
+            customAlertsData = Array.from({ length: 10 }, (_, i) => ({
+                id: i,
+                time: '',
+                enabled: false,
+                label: `Alert ${i+1}`
+            }));
+        }
+        renderCustomAlerts();
+    }
+
+    // Convert 12h string to 24h "HH:MM" for storage
+    function time12hTo24hString(time12h) {
+        if (!time12h.trim()) return '';
+        const { hour24, minute } = parse12hTo24h(time12h);
+        return `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    }
+
+    // Convert stored 24h "HH:MM" to 12h display string
+    function time24hTo12hString(time24h) {
+        if (!time24h) return '';
+        const [h, m] = time24h.split(':').map(Number);
+        return format12h(h, m);
+    }
+
+    function renderCustomAlerts() {
+        const container = document.getElementById('customAlertsContainer');
+        container.innerHTML = '';
+        customAlertsData.forEach((alert, idx) => {
+            const displayTime = time24hTo12hString(alert.time);
+            const card = document.createElement('div');
+            card.className = 'alert-card';
+            card.innerHTML = `
+                <div class="alert-header">
+                    <span class="alert-label">${alert.label}</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" data-id="${idx}" ${alert.enabled ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <input type="text" class="alert-time-input" data-id="${idx}" placeholder="02:30 PM" value="${displayTime}">
+            `;
+            container.appendChild(card);
+        });
+        
+        document.querySelectorAll('.toggle-switch input').forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const id = e.target.dataset.id;
+                customAlertsData[id].enabled = e.target.checked;
+            });
+        });
+        document.querySelectorAll('.alert-time-input').forEach(inp => {
+            inp.addEventListener('input', (e) => {
+                const id = e.target.dataset.id;
+                const raw = e.target.value.trim();
+                customAlertsData[id].time = time12hTo24hString(raw);
+            });
+        });
+    }
+
+    async function saveCustomAlerts() {
+        const statusEl = document.getElementById('saveStatus');
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/alerts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(customAlertsData)
+            });
+            const result = await res.json();
+            if (result.success) {
+                statusEl.textContent = '✅ Alerts saved!';
+                setTimeout(() => statusEl.textContent = '', 3000);
+            } else {
+                statusEl.textContent = '❌ Save failed.';
+            }
+        } catch (err) {
+            statusEl.textContent = '❌ Backend unreachable.';
+        }
+    }
+
+    // Modified init
+    function init() {
+        buildCards();
+        updateAllTimers();
+        updateCurrentTime();
+        loadCustomAlerts();
+        
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(() => {
+            updateAllTimers();
+            updateCurrentTime();
+        }, 1000);
+        
+        document.getElementById('saveAlertsBtn').addEventListener('click', saveCustomAlerts);
+    }
+    
+    init();
+</script>
+</body>
+</html>
