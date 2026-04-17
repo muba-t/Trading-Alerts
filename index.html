@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>trading hours · market countdown</title>
     <style>
-        /* ===== YOUR EXISTING STYLES (unchanged) ===== */
+        /* ===== YOUR EXISTING STYLES (unchanged except for alerts grid) ===== */
         * {
             margin: 0;
             padding: 0;
@@ -252,7 +252,7 @@
             color: #facc15;
         }
 
-        /* ===== NEW STYLES FOR CUSTOM ALERTS ===== */
+        /* ===== UPDATED STYLES FOR CUSTOM ALERTS ===== */
         .custom-alerts-section {
             margin-top: 3rem;
             background: rgba(12, 18, 28, 0.6);
@@ -277,7 +277,7 @@
 
         .alerts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(5, 1fr);  /* 5 columns on desktop */
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -298,10 +298,22 @@
             justify-content: space-between;
         }
 
-        .alert-label {
-            font-weight: 600;
+        .alert-label-input {
+            background: transparent;
+            border: 1px solid #3e5a8a;
             color: #bdd3ff;
+            font-weight: 600;
             font-size: 0.9rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            width: 100px;
+            transition: border 0.15s;
+        }
+
+        .alert-label-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: #1e2c42;
         }
 
         .toggle-switch {
@@ -385,6 +397,12 @@
             color: #a5b9ff;
         }
 
+        @media (max-width: 1000px) {
+            .alerts-grid {
+                grid-template-columns: repeat(3, 1fr);  /* 3 columns on medium screens */
+            }
+        }
+
         @media (max-width: 700px) {
             .markets-grid {
                 grid-template-columns: 1fr;
@@ -409,6 +427,9 @@
             .custom-alerts-section {
                 padding: 1.2rem;
             }
+            .alerts-grid {
+                grid-template-columns: repeat(2, 1fr);  /* 2 columns on mobile */
+            }
         }
     </style>
 </head>
@@ -421,10 +442,10 @@
 
     <div class="markets-grid" id="marketsGrid"></div>
 
-    <!-- ===== CUSTOM ALERTS SECTION ===== -->
+    <!-- ===== CUSTOM ALERTS SECTION (UPDATED) ===== -->
     <div class="custom-alerts-section">
-        <h2>⏰ Custom Alerts (5 min before)</h2>
-        <p class="hint">Set up to 10 custom times (12‑hour format, e.g. 02:30 PM). Toggle on/off.</p>
+        <h2>⏰ Custom Alerts (5 min before, Mon–Fri)</h2>
+        <p class="hint">Set up to 10 custom times (12‑hour format, e.g. 02:30 PM). Edit names as needed. Toggle on/off.</p>
         <div id="customAlertsContainer" class="alerts-grid"></div>
         <button id="saveAlertsBtn" class="save-btn">💾 Save Alerts to Server</button>
         <div id="saveStatus" class="save-status"></div>
@@ -447,7 +468,7 @@
         { name: "NEW YORK", openTimeET: "9:30 AM", closeTimeET: "4:00 PM", allowSundayOpen: false }
     ];
 
-    // ========== BACKEND API URL (UPDATED) ==========
+    // ========== BACKEND API URL ==========
     const BACKEND_URL = 'https://trading-alerts-0qsr.onrender.com';
 
     // Helper: parse "02:30 PM" → { hour24, minute }
@@ -471,7 +492,7 @@
         return `${h12.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${ampm}`;
     }
 
-    // ========== EXISTING TIME / SESSION LOGIC ==========
+    // ========== EXISTING TIME / SESSION LOGIC (unchanged) ==========
     function getCurrentETComponents() {
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -864,7 +885,7 @@
         }
     }
 
-    // ========== CUSTOM ALERTS LOGIC ==========
+    // ========== UPDATED CUSTOM ALERTS LOGIC ==========
     let customAlertsData = [];
 
     // Load from backend
@@ -908,7 +929,7 @@
             card.className = 'alert-card';
             card.innerHTML = `
                 <div class="alert-header">
-                    <span class="alert-label">${alert.label}</span>
+                    <input type="text" class="alert-label-input" data-id="${idx}" value="${alert.label}" maxlength="20">
                     <label class="toggle-switch">
                         <input type="checkbox" data-id="${idx}" ${alert.enabled ? 'checked' : ''}>
                         <span class="slider"></span>
@@ -919,12 +940,23 @@
             container.appendChild(card);
         });
         
+        // Attach listeners for label changes
+        document.querySelectorAll('.alert-label-input').forEach(inp => {
+            inp.addEventListener('input', (e) => {
+                const id = e.target.dataset.id;
+                customAlertsData[id].label = e.target.value.trim() || `Alert ${parseInt(id)+1}`;
+            });
+        });
+        
+        // Toggle switches
         document.querySelectorAll('.toggle-switch input').forEach(chk => {
             chk.addEventListener('change', (e) => {
                 const id = e.target.dataset.id;
                 customAlertsData[id].enabled = e.target.checked;
             });
         });
+        
+        // Time inputs
         document.querySelectorAll('.alert-time-input').forEach(inp => {
             inp.addEventListener('input', (e) => {
                 const id = e.target.dataset.id;
@@ -954,7 +986,6 @@
         }
     }
 
-    // Modified init
     function init() {
         buildCards();
         updateAllTimers();
